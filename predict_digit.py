@@ -14,15 +14,11 @@ b2 = model["b2"]
 
 
 def preprocess_image(path):
-    # Load image and convert to grayscale
     original = Image.open(path).convert("RGB")
     gray = ImageOps.grayscale(original)
 
-    # Improve contrast slightly
     gray = ImageOps.autocontrast(gray)
 
-    # Find dark pixels that may belong to the ink.
-    # This assumes black ink on light paper.
     threshold = 180
     mask = gray.point(
         lambda pixel: 255 if pixel < threshold else 0
@@ -36,14 +32,10 @@ def preprocess_image(path):
             "of black ink on white paper."
         )
 
-    # Crop around the digit
     digit = gray.crop(bbox)
 
-    # Convert dark ink to bright strokes on a dark background.
-    # This matches the general polarity of sklearn digits.
     digit = ImageOps.invert(digit)
-
-    # Add padding so the digit doesn't touch the edges
+    
     width, height = digit.size
     side = max(width, height) + max(2, int(max(width, height) * 0.2))
 
@@ -52,22 +44,16 @@ def preprocess_image(path):
     y = (side - height) // 2
     canvas.paste(digit, (x, y))
 
-    # Resize to the network's 8 x 8 input
     small = canvas.resize(
         (8, 8),
         Image.Resampling.LANCZOS
     )
 
-    # Normalize to [0, 1], matching training inputs
+
     pixels = np.asarray(small, dtype=np.float64) / 255.0
 
-    # Flatten 8 x 8 into 64 features
     return pixels.reshape(1, 64), small
 
-
-# ==========================================
-# 3. NETWORK FORWARD PASS
-# ==========================================
 
 def relu(z):
     return np.maximum(0, z)
@@ -86,9 +72,6 @@ def predict(X):
     return softmax(z2)
 
 
-# ==========================================
-# 4. PREDICT YOUR DIGIT
-# ==========================================
 
 image_path = "digit.png"
 
@@ -106,9 +89,6 @@ for digit, probability in enumerate(probabilities):
     print(f"{digit}: {probability * 100:6.2f}%")
 
 
-# ==========================================
-# 5. VISUALIZE WHAT THE MODEL RECEIVED
-# ==========================================
 
 plt.figure(figsize=(7, 3))
 
